@@ -15,7 +15,7 @@ export const sizes = {
 export const scene = new Scene()
 scene.background = new Color('#333')
 
-const canvas = document.getElementById('app')
+const canvasParant = document.getElementById('three-canvas')
 
 // Renderer
 export const renderer = new WebGLRenderer({
@@ -23,7 +23,8 @@ export const renderer = new WebGLRenderer({
   alpha: true,
 })
 
-canvas.appendChild(renderer.domElement)
+canvasParant.appendChild(renderer.domElement)
+export const canvas = canvasParant.children[0]
 // More realistic shadows
 renderer.shadowMap.enabled = true
 renderer.shadowMap.type = PCFShadowMap
