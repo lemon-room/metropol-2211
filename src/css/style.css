@@ -1,31 +1,106 @@
 * {
-    padding: 0;
-    margin: 0;
+  padding: 0;
+  margin: 0;
+  box-sizing: inherit;
 }
 
-html,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+html {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  background: #101118;
+  overflow: hidden;
+}
 body {
-    overflow: hidden;
+  padding: 0;
+  margin: -1px 0 0 0 !important;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, Helvetica, sans-serif;
 }
 
 .webgl {
-    position: fixed;
-    top: 0;
-    left: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+#app {
+  overflow: hidden;
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  min-height: max(0px, 100vh);
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  overscroll-behavior: contain;
+  pointer-events: none;
+  top: 0;
+  left: 0;
+  z-index: 1;
 }
 
 .license {
-    position: fixed;
-    z-index: 1000;
-    bottom: 0;
-    left: 5px;
-    color: white;
-    font-family: 'Courier New', Courier, monospace;
+  position: fixed;
+  z-index: 1000;
+  bottom: 0;
+  left: 5px;
+  color: white;
+  font-family: 'Courier New', Courier, monospace;
+}
+#scr-btn {
+  position: absolute;
+  z-index: 99999;
+  bottom: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+#loadingContainer {
+  background: #000;
+}
+#loadBackground {
+  background: url('preloader-bg.jpg');
+  background-size: cover;
+  background-position: 50% 50%;
+}
+#requestingCameraPermissions {
+  background: #101118;
 }
 
 a:visited {
-    color: white;
+  color: white;
 }
+
 a:hover {
-    color: dodgerblue;
+  color: dodgerblue;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.fade-in {
+  display: block;
+  animation: fadeIn 2s;
+  transition: opacity 1s;
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+
+  40% {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }

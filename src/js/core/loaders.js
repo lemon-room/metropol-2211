@@ -1,9 +1,9 @@
 import {
   LoadingManager,
 } from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
-import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js'
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
 
 const manager = new LoadingManager()
 
@@ -27,7 +27,7 @@ manager.onError = function (url) { console.log("Ошибка загркзки " 
 
 // Loaders
 const dracoLoader = new DRACOLoader()
-dracoLoader.setDecoderPath('/draco/')
+dracoLoader.setDecoderPath('/src/js/three/addons/libs/draco/')
 dracoLoader.setDecoderConfig({ type: 'wasm' })
 export const loaderGLB = new GLTFLoader(manager)
 export const loaderRGBE = new RGBELoader(manager)

@@ -15,15 +15,15 @@ export const sizes = {
 export const scene = new Scene()
 scene.background = new Color('#333')
 
-const canvas = document.getElementById('webgl')
+const canvas = document.getElementById('app')
 
 // Renderer
 export const renderer = new WebGLRenderer({
-  canvas,
   antialias: true,
   alpha: true,
 })
 
+canvas.appendChild(renderer.domElement)
 // More realistic shadows
 renderer.shadowMap.enabled = true
 renderer.shadowMap.type = PCFShadowMap
