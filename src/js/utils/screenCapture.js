@@ -311,11 +311,11 @@ export class CaptureController {
     const handleTouchStart = (e) => {
       e.preventDefault()
       touchMoved = false
-      captureButton.style.transform = 'translateX(-50%) scale(0.95)'
+      captureButton.style.transform = 'scale(0.95)'
 
       longPressTimer = setTimeout(() => {
         if (!touchMoved) {
-          captureButton.style.transform = 'translateX(-50%) scale(0.9)'
+          captureButton.style.transform = 'cale(0.9)'
           this.mediaRecorderService.startRecording()
         }
       }, this.LONG_PRESS_DURATION)
@@ -323,7 +323,7 @@ export class CaptureController {
 
     const handleTouchEnd = (e) => {
       e.preventDefault()
-      captureButton.style.transform = 'translateX(-50%) scale(1)'
+      captureButton.style.transform = 'scale(1)'
 
       if (longPressTimer) {
         clearTimeout(longPressTimer)

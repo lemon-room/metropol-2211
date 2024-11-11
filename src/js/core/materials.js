@@ -2,7 +2,7 @@ import {
   ShaderMaterial, Color, AdditiveBlending, DoubleSide
 } from 'three'
 
-const PARTICLE_SIZE = 24
+const PARTICLE_SIZE = 42
 const baseColor = new Color(0xffd700)
 const glowColor = new Color(0xff8c00)
 export const particleMaterial = new ShaderMaterial({
@@ -13,6 +13,7 @@ export const particleMaterial = new ShaderMaterial({
     glowColor: { value: glowColor },
     wingSpread: { value: 0.3 },
     flapSpeed: { value: 1.0 },
+    uOpacity: { value: 0 },
   },
   vertexShader: `
     uniform float time;
@@ -110,7 +111,7 @@ export const particleMaterial = new ShaderMaterial({
         
         float alpha = glow * (0.8 + vIntensity * 0.2);
         
-        gl_FragColor = vec4(finalColor, alpha);
+        gl_FragColor = vec4(finalColor, alpha * uOpacity);
     }
   `,
   transparent: true,

@@ -16,12 +16,10 @@ export class ParticleSystem {
   createFromMesh(gltfScene) {
     this.targetMesh = gltfScene.getObjectByName('KV_BG')
     if (!this.targetMesh) {
-      console.error('Mesh KV_BG not found')
+
       return null
     }
 
-    console.log('Target mesh found:', this.targetMesh)
-    console.log('Initial geometry:', this.targetMesh.geometry)
 
     // Создаем сэмплер
     this.sampler = new MeshSurfaceSampler(this.targetMesh).build()
@@ -57,18 +55,18 @@ export class ParticleSystem {
 
     // Настраиваем анимацию
     if (gltfScene.animations && gltfScene.animations.length > 0) {
-      console.log('Animations found:', gltfScene.animations)
+
       this.mixer = new THREE.AnimationMixer(this.targetMesh)
 
       gltfScene.animations.forEach((clip, index) => {
-        console.log(`Playing animation ${index}:`, clip.name)
+
         const action = this.mixer.clipAction(clip)
         action.play()
       })
 
       // Добавляем слушатель обновления анимации
       this.mixer.addEventListener('loop', (e) => {
-        console.log('Animation loop event:', e)
+
       })
     }
 
@@ -77,9 +75,6 @@ export class ParticleSystem {
 
   updateParticlePositions() {
     if (!this.targetMesh || !this.particles) return;
-
-    // Проверяем, обновилась ли геометрия меша
-    console.log('Current mesh geometry:', this.targetMesh.geometry)
 
     // Пересоздаем sampler с текущей геометрией
     this.sampler = new MeshSurfaceSampler(this.targetMesh).build()
@@ -108,7 +103,6 @@ export class ParticleSystem {
     originalPositions.needsUpdate = true
     nextPositions.needsUpdate = true
 
-    console.log('Particles updated')
   }
 
   update(delta) {

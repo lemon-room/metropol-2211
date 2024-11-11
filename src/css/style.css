@@ -1,22 +1,13 @@
-* {
-  padding: 0;
-  margin: 0;
-  box-sizing: inherit;
-}
-
-*:before,
-*:after {
-  box-sizing: inherit;
-}
 html {
   box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
   background: #101118;
   overflow: hidden;
 }
+
 body {
   padding: 0;
-  margin: -1px 0 0 0 !important;
+  margin: -1px 0 0 0;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     'Helvetica Neue', Arial, Helvetica, sans-serif;
@@ -26,8 +17,8 @@ body {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100% !important;
-  height: 100% !important;
+  width: 100%;
+  height: 100%;
 }
 
 #app {
@@ -54,21 +45,22 @@ body {
   color: white;
   font-family: 'Courier New', Courier, monospace;
 }
+
 #scr-btn {
-  position: absolute;
+  position: relative;
   z-index: 99999;
-  bottom: 20%;
-  left: 50%;
-  transform: translateX(-50%);
 }
+
 #loadingContainer {
   background: #000;
 }
+
 #loadBackground {
-  background: url('preloader-bg.jpg');
+  background: url('/assets/preloader-bg.jpg');
   background-size: cover;
   background-position: 50% 50%;
 }
+
 #requestingCameraPermissions {
   background: #101118;
 }
@@ -90,9 +82,10 @@ a:hover {
   animation: fadeIn 2s;
   transition: opacity 1s;
 }
+
 .record-button-container {
   position: absolute;
-  bottom: 40px;
+  bottom: 10%;
   left: 50%;
   transform: translateX(-50%);
   z-index: 9999;
@@ -107,7 +100,6 @@ a:hover {
   border: none;
   padding: 0;
   cursor: pointer;
-  position: relative;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   -webkit-tap-highlight-color: transparent; /* Убираем подсветку на iOS */

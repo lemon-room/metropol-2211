@@ -4,7 +4,7 @@ import {
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
-
+window.GLTFLoader = GLTFLoader
 const manager = new LoadingManager()
 
 manager.onStart = function (url, itemsLoaded, itemsTotal) {
