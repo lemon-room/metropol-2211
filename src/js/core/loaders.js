@@ -11,15 +11,15 @@ manager.onStart = function (url, itemsLoaded, itemsTotal) {
   console.log("Начало загрузки")
 }
 manager.onProgress = function (url, itemsLoaded, itemsTotal) {
-  console.log(
-    "Загружаем: " +
-    url +
-    ".\nЗагружено " +
-    itemsLoaded +
-    " из " +
-    itemsTotal +
-    " файлов.",
-  )
+  // console.log(
+  //   "Загружаем: " +
+  //   url +
+  //   ".\nЗагружено " +
+  //   itemsLoaded +
+  //   " из " +
+  //   itemsTotal +
+  //   " файлов.",
+  // )
 }
 manager.onLoad = function () { console.log("Загрузка завершена!") }
 manager.onError = function (url) { console.log("Ошибка загркзки " + url) }

@@ -1,81 +1,386 @@
 import * as THREE from 'three'
-
 import { loaderGLB, loaderRGBE } from './core/loaders.js'
-//import { particleMaterial } from './core/materials.js'
-//import { ParticleSystem } from './core/particleSystem.js'
+import { particleMaterial } from './core/materials.js'
+import { SparklesSystem } from './core/sparcles.js'
+import { CaptureController } from './utils/screenCapture.js'
 import { ambientLight, pointLight, directionalLight } from './core/lights.js'
-// import { CaptureController } from './utils/screenCapture.js'
-
 
 window.THREE = THREE
 
-// Constants
-//const particleSystemInstance = new ParticleSystem()
-const FRAME_RATE = 1000 / 60
 const clock = new THREE.Clock()
-const mixers = []
 let lastTime = performance.now()
-let sceneOne, sceneTwo, hdriMap
-let sceneOneAnimations, sceneTwoAnimations
-let sceneOneAnimationMixer, sceneTwoAnimationMixer
-let bgAnimationMixer
+const mixers = []
+
+let hdriMap
+let sceneOne, sceneTwo, kVisualBG
+let sceneOneAnimations, sceneTwoAnimations ,kVisualBGAnimations
+let sceneOneAnimationMixer, sceneTwoAnimationMixer, kVisualBGAnimationMixer
+let modelsLoaded = false
+
 const sceneGroup = new THREE.Group()
-// Создаем таймлайны на верхнем уровне
+const showContainerGroup = new THREE.Group()
+
+showContainerGroup.visible = false
+let sparclsMesh = null
+
+const textureLoader = new THREE.TextureLoader()
+const sparklesSystem = new SparklesSystem()
+
+
+// let flag
+// let flagGeometry
+// let flagMaterial
+
+
 const fadeInTimeline = gsap.timeline({
+    defaults: { duration: 1.2, ease: "power2.inOut" }
+})
+const fadeOutTimeline = gsap.timeline({
     defaults: { duration: 1.2, ease: "power2.inOut" }
 })
 
 
+const loadModels = () => {
+    const sceneOneLoad = new Promise((resolve, reject) => {
+        loaderGLB.load('/assets/models/Logo_1113-transformed.glb', (gltf) => {
+            sceneOne = gltf.scene
+            sparclsMesh = gltf.scene.children[1]
+
+            sceneOne.traverse((child) => {
+                if (child.isMesh) {
+                    child.material.envMap = hdriMap
+                }
+            })
+            if (gltf.animations && gltf.animations.length > 0) {
+                sceneOneAnimationMixer = new THREE.AnimationMixer(sceneOne)
+                sceneOneAnimations = gltf.animations
+            }
+            resolve()
+        }, undefined, (error) => {
+            console.error('Error loading scene1:', error)
+            reject(error)
+        })
+    })
+
+    const sceneTwoLoad = new Promise((resolve, reject) => {
+        loaderGLB.load('/assets/models/Planets.glb', (gltf) => {
+            sceneTwo = gltf.scene
+            sceneTwo.scale.set(0, 0, 0)
+            sceneTwo.position.set(0, 0.35, 0)
+            sceneTwo.traverse((child) => {
+                if (child.isMesh) {
+                    child.material.envMap = hdriMap
+                    child.material.transparent = true
+                    child.material.opacity = 0
+                }
+            })
+            if (gltf.animations && gltf.animations.length > 0) {
+                // Настройка анимаций
+                sceneTwoAnimationMixer = new THREE.AnimationMixer(sceneTwo)
+                sceneTwoAnimations = gltf.animations
+            }
+            resolve()
+        }, undefined, (error) => {
+            console.error('Error loading scene1:', error)
+            reject(error)
+        })
+    })
+
+    const kVisualBGLoad = new Promise((resolve, reject) => {
+        loaderGLB.load('/assets/models/BG-TEST-separated-transformed.glb', (gltf) => {
+            kVisualBG = gltf.scene
+            kVisualBG.scale.set(1.3, 1.3, 1.3)
+            kVisualBG.position.set(0, 0.45, 0)
+            kVisualBG.traverse((child) => {
+                if (child.isMesh) {
+                    child.frustumCulled = false
+                    child.material.envMap = hdriMap
+                    child.material.transparent = true
+                    child.material.opacity = 1
+                }
+            })
+            if (gltf.animations && gltf.animations.length > 0) {
+                kVisualBGAnimationMixer = new THREE.AnimationMixer(kVisualBG)
+                kVisualBGAnimations = gltf.animations
+
+            }
+            resolve()
+        }, undefined, (error) => {
+            console.error('Error loading scene1:', error)
+            reject(error)
+        })
+    })
+
+    return Promise.all([sceneOneLoad, sceneTwoLoad, kVisualBGLoad])
+}
+
+const loadTextures = () => {
+    const hdriLoad = new Promise((resolve, reject) => {
+        loaderRGBE.setPath('/textures/')
+            .load('Jewelry-HDRI-black-contrast.hdr', function (texture) {
+                texture.mapping = THREE.EquirectangularReflectionMapping
+                hdriMap = texture
+                resolve()
+            }, undefined, (error) => {
+                console.error('Error loading HDRI:', error)
+                reject(error)
+            })
+    })
+
+    return Promise.all([hdriLoad])
+}
+
+
+const initLoader = async () => {
+    await loadTextures()
+    await loadModels()
+
+    // createFlag()
+
+    mixers.push(sceneOneAnimationMixer)
+    mixers.push(sceneTwoAnimationMixer)
+    mixers.push(kVisualBGAnimationMixer)
+
+    modelsLoaded = true
+
+    sceneGroup.add(sceneOne)
+    sceneGroup.add(sceneTwo)
+    sceneGroup.add(kVisualBG)
+}
+
+function fadeOnPlanets() {
+
+    if (kVisualBG) {
+        kVisualBG.traverse((child) => {
+            if (child.isMesh) {
+                // fadeInTimeline.to(child.material, {
+                //     opacity: 1,
+                //     duration: 2.6,
+                //     ease: "power2.inOut"
+                // }, 1.2)
+                fadeOutTimeline.to(child.material, {
+                    opacity: 0,
+                    duration: 2.6,
+                    ease: "power2.inOut"
+                }, 8)
+            }
+        })
+    }
+
+    if (sceneOne) {
+
+        fadeInTimeline.to(particleMaterial.uniforms.uOpacity, {
+            value: 1,
+            duration: 2
+        }, 2)
+        // fadeInTimeline.to(flagMaterial.uniforms.uOpacity, {
+        //     value: 1,
+        //     duration: 1
+        // }, 3)
+        // fadeOutTimeline.to(particleMaterial.uniforms.uOpacity, {
+        //     value: 0,
+        //     duration: 2
+        // }, 10)
+        // fadeOutTimeline.to(flagMaterial.uniforms.uOpacity, {
+        //     value: 0,
+        //     duration: 2
+        // }, 11)
+    }
+
+    if (sceneTwo) {
+
+        fadeInTimeline.to(sceneTwo.position, {
+            y: 1,
+            duration: 2.5,
+            ease: "power2.out",
+            onStart: () => console.log("Position animation started"),
+        }, 12)
+
+
+        fadeInTimeline.to(sceneTwo.scale, {
+            x: 0.35,
+            y: 0.35,
+            z: 0.35,
+            duration: 2.5,
+            ease: "elastic.out(1, 0.75)",
+            onStart: () => console.log("Scale animation started"),
+        }, 12)
+
+
+        sceneTwo.traverse((child) => {
+            if (child.isMesh) {
+                fadeInTimeline.to(child.material, {
+                    opacity: 1,
+                    duration: 2.6,
+                    ease: "power2.inOut"
+                }, 10.6)
+            }
+        })
+    }
+}
+
+// function createFlag() {
+//     textureLoader.load(
+//         '/assets/background-UPSCALED.png',
+//         (texture) => {
+//             flagGeometry = new THREE.PlaneGeometry(2, 1, 32, 16)
+//             flagMaterial = new THREE.ShaderMaterial({
+//                 uniforms: {
+//                     uOpacity: { value: 0 },
+//                     time: { value: 0 },
+//                     flagTexture: { value: texture }
+//                 },
+//                 vertexShader: `
+//           uniform float time;
+//           varying vec2 vUv;
+//
+//           void main() {
+//             vUv = uv;
+//             vec3 pos = position;
+//             float wave = sin(pos.x * 3.0 + time * 2.0) * 0.1;
+//             pos.z += wave * pos.x;
+//             gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+//           }
+//         `,
+//                 fragmentShader: `
+//           uniform float uOpacity;
+//           uniform sampler2D flagTexture;
+//           varying vec2 vUv;
+//
+//           void main() {
+//             vec4 texColor = texture2D(flagTexture, vUv);
+//             float shade = 0.8 + 0.2 * sin(vUv.x * 10.0);
+//             gl_FragColor = texColor * vec4(vec3(shade), 1.0 * uOpacity);
+//           }
+//         `,
+//                 side: THREE.DoubleSide,
+//                 transparent: true
+//             })
+//
+//             flag = new THREE.Mesh(flagGeometry, flagMaterial)
+//             flag.scale.set(3,3,3)
+//             flag.position.y = 0.75
+//             flag.position.z = -1.5
+//             sceneGroup.add(flag)
+//
+//         },
+//         undefined,
+//         (error) => {
+//             console.error('Ошибка загрузки текстуры:', error)
+//         }
+//     )
+// }
+
+
+// sceneGroup.add(particlesGroup)
+
+
 const imageTargetPipelineModule = () => {
-    ////////////////////////////////////////////////////////////////
-    let hasPlayedAnimation = false; // Флаг, что анимация была воспроизведена
+    let hasPlayedAnimation = false
+    // const resetAndPlayAnimation = () => {
+    //     if (sceneOneAnimations && sceneOneAnimationMixer) {
+    //         // Stop all current animations
+    //         sceneOneAnimationMixer.stopAllAction()
+    //
+    //         console.log('Playing animations')
+    //         sceneOneAnimations.forEach((clip) => {
+    //             const action = sceneOneAnimationMixer.clipAction(clip)
+    //             console.log('Playing animation clip:', clip.name)
+    //             action.setLoop(THREE.LoopOnce, 1)
+    //             action.clampWhenFinished = true
+    //             action.play()
+    //         })
+    //         sceneTwoAnimations.forEach(clip => {
+    //             const action = sceneTwoAnimationMixer.clipAction(clip)
+    //             action.play()
+    //         })
+    //     } else {
+    //         console.warn('Animations or mixer not ready')
+    //     }
+    //
+    // }
+
 
     const showTarget = ({ detail }) => {
         if (detail.name === 'qr-target') {
-            sceneGroup.position.copy(detail.position)
-            sceneGroup.quaternion.copy(detail.rotation)
-            sceneGroup.scale.set(detail.scale, detail.scale, detail.scale)
-            sceneGroup.visible = true
+            showContainerGroup.position.copy(detail.position)
+            showContainerGroup.quaternion.copy(detail.rotation)
+            showContainerGroup.scale.set(detail.scale, detail.scale, detail.scale)
+            showContainerGroup.visible = true
 
-            fadeOnPlanets()
-            // fadeInTimeline.to(particleMaterial, {
-            //     opacity: 1,
-            //     duration: 2
-            // }, 3.6)
-            // fadeInTimeline.to(particleMaterial, {
-            //     opacity: 0,
-            //     duration: 2
-            // }, 10)
-            // Запускаем анимацию только если она еще не была воспроизведена
-            if (sceneOneAnimations && sceneOneAnimationMixer && !hasPlayedAnimation) {
-                hasPlayedAnimation = true; // Отмечаем, что анимация запущена
 
-                sceneOneAnimations.forEach((clip) => {
-                    const action = sceneOneAnimationMixer.clipAction(clip)
-                    action.setLoop(THREE.LoopOnce, 1)
-                    action.clampWhenFinished = true
-                    action.play()
-                })
+            if (!hasPlayedAnimation && modelsLoaded && sceneOneAnimations && sceneTwoAnimations && kVisualBGAnimations) { // Проверяем наличие анимаций
+                // console.log('Starting animation')
+                hasPlayedAnimation = true
+                fadeOnPlanets()
+                // Проверяем mixer перед воспроизведением
+                if (sceneOneAnimationMixer) {
+                    sceneOneAnimations.forEach((clip) => {
+                        const action = sceneOneAnimationMixer.clipAction(clip)
+                        // console.log('Playing animation clip:', clip.name)
+                        action.setLoop(THREE.LoopOnce, 1)
+                        action.clampWhenFinished = true
+                        action.play()
+                    })
+                }
+
+                if (sceneTwoAnimationMixer) {
+                    sceneTwoAnimations.forEach(clip => {
+                        const action = sceneTwoAnimationMixer.clipAction(clip)
+                        action.play()
+                    })
+                }
+
+                if (kVisualBGAnimationMixer) {
+                    kVisualBGAnimations.forEach(clip => {
+                        const action = kVisualBGAnimationMixer.clipAction(clip)
+                        action.setLoop(THREE.LoopOnce, 1)
+                        action.clampWhenFinished = true
+                        action.play()
+                    })
+                }
             }
         }
     }
 
     const hideTarget = ({ detail }) => {
         if (detail.name === 'qr-target') {
-            sceneGroup.visible = false
+            showContainerGroup.visible = false
+            hasPlayedAnimation = false
         }
     }
 
-    ////////////////////////////////////////////////////////////////
     return {
         name: 'metropol-2211',
         onStart: ({ canvas }) => {
+            window.canvas = canvas
             const { scene, camera } = XR8.Threejs.xrScene()
-            initXrScene({ scene, camera })
+            camera.near = 0.01
+            camera.far = 1000
+            camera.updateProjectionMatrix()
+            scene.environment = hdriMap
+            scene.add(
+                ambientLight, pointLight, directionalLight)
 
-            canvas.addEventListener('touchmove', (event) => {
-                event.preventDefault()
-            })
+
+
+            const thatSparklesGroup = sparklesSystem.getGroup()
+            thatSparklesGroup.position.y = 0.75
+            sceneGroup.add(thatSparklesGroup)
+            sceneGroup.position.y = 1
+            sceneGroup.scale.set(1.5, 1.5, 1.5)
+            showContainerGroup.add(sceneGroup)
+            scene.add(showContainerGroup)
+            sparklesSystem.init()
+
+
+            const captureController = new CaptureController()
+            captureController.initButtonHandlers()
+
+
+            // canvas.addEventListener('touchmove', (event) => {
+            //     event.preventDefault()
+            // })
 
             XR8.XrController.updateCameraProjectionMatrix({
                 origin: camera.position,
@@ -83,19 +388,31 @@ const imageTargetPipelineModule = () => {
             })
         },
         onUpdate: () => {
-            const currentTime = performance.now()
+            const currentTime = clock.getElapsedTime()
             const deltaTime = currentTime - lastTime
+            sparklesSystem.update(currentTime)
 
-            if (deltaTime > FRAME_RATE) {
-                const delta = clock.getDelta()
-                mixers.forEach(mixer => mixer.update(delta))
-                // particleSystemInstance.update(delta)
-                // particleMaterial.uniforms.time.value = clock.getElapsedTime()
+            // if (flag && flag.material && flag.material.uniforms) {
+            //     flag.material.uniforms.time.value = currentTime
+            // }
 
-                //renderer.render(scene, camera)
-                lastTime = currentTime
+            // Обновляем uniform time для всех мешей
+            // if (kVisualBG) {
+            //     kVisualBG.traverse((child) => {
+            //         if (child.isMesh && child.material.uniforms) {
+            //             child.material.uniforms.time.value = currentTime
+            //         }
+            //     })
+            // }
+
+            if (sceneOneAnimationMixer && sceneTwoAnimationMixer && kVisualBGAnimationMixer ) {
+                mixers.forEach((mixer) => {
+                    if (mixer) {
+                        mixer.update(deltaTime)
+                    }
+                })
             }
-
+            lastTime = currentTime
         },
         listeners: [
             { event: 'reality.imagefound', process: showTarget },
@@ -105,100 +422,6 @@ const imageTargetPipelineModule = () => {
     }
 }
 
-////////////////////////////////////////////////////////////////
-// Initialization
-const initXrScene = ({ scene, camera }) => {
-    loadTextures()
-    scene.environment = hdriMap
-    scene.add(ambientLight, pointLight, directionalLight)
-    camera.position.set(0, 3, 0)
-    // const captureController = new CaptureController()
-    // captureController.initButtonHandlers()
-    // loaderGLB.load('/assets/models/BG.glb', (gltf) => {
-
-    //     const bgMesh = gltf.scene
-
-    //     sceneGroup.add(bgMesh)
-    //     bgMesh.visible = false
-
-    //     if (gltf.animations && gltf.animations.length > 0) {
-
-    //         bgAnimationMixer = new THREE.AnimationMixer(bgMesh)
-
-    //         gltf.animations.forEach((clip) => {
-
-    //             const action = bgAnimationMixer.clipAction(clip)
-    //             action.play()
-    //         })
-
-    //         mixers.push(bgAnimationMixer)
-    //     }
-
-    //     const particleSystem = particleSystemInstance.createFromMesh(gltf.scene)
-    //     if (particleSystem) {
-    //         //particleSystem.rotation.x = Math.PI / 2
-    //         //particleSystem.position.z = - 2
-    //         sceneGroup.add(particleSystem)
-    //         particleMaterial.opacity = 0
-
-    //     }
-    // })
-
-    loaderGLB.load('/assets/models/KV.glb', (gltf) => {
-
-        sceneOne = gltf.scene
-        sceneOne.position.set(0, 0.25, 0)
-        sceneOne.scale.set(0.8, 0.8, 0.8)
-        sceneGroup.add(sceneOne)
-        sceneOne.traverse(function (child) {
-            if (child instanceof THREE.Mesh) {
-                child.material.envMap = hdriMap
-            }
-        })
-
-
-        if (gltf.animations && gltf.animations.length > 0) {
-            sceneOneAnimationMixer = new THREE.AnimationMixer(sceneOne)
-            sceneOneAnimations = gltf.animations
-
-            mixers.push(sceneOneAnimationMixer)
-        }
-    })
-    loaderGLB.load('/assets/models/Planets.glb', (gltf) => {
-
-        sceneTwo = gltf.scene
-        sceneGroup.add(sceneTwo)
-
-        sceneTwo.scale.set(0, 0, 0) // Начальный масштаб 0
-        sceneTwo.position.set(0, -1, 0) // Начальная позиция ниже
-        //sceneTwo.rotation.x = Math.PI / 2
-
-        sceneTwo.traverse((child) => {
-            if (child.isMesh) {
-                child.material.transparent = true
-                child.material.opacity = 0
-            }
-        })
-        if (gltf.animations && gltf.animations.length > 0) {
-
-            sceneTwoAnimationMixer = new THREE.AnimationMixer(sceneTwo)
-            sceneTwoAnimations = gltf.animations
-            sceneTwoAnimations.forEach((clip) => {
-
-                const action = sceneTwoAnimationMixer.clipAction(clip)
-                action.play()
-            })
-
-
-            mixers.push(sceneTwoAnimationMixer)
-        }
-
-    })
-
-    scene.add(sceneGroup)
-    sceneGroup.visible = false
-}
-////////////////////////////////////////////////////////////////
 const onxrloaded = () => {
     XR8.XrController.configure({ disableWorldTracking: true })
     XR8.addCameraPipelineModules([
@@ -209,54 +432,39 @@ const onxrloaded = () => {
         XRExtras.FullWindowCanvas.pipelineModule(),
         XRExtras.Loading.pipelineModule(),
         XRExtras.RuntimeError.pipelineModule(),
-        XR8.CanvasScreenshot.pipelineModule(),
-        XR8.MediaRecorder.pipelineModule(),
         imageTargetPipelineModule(),
     ])
-
 
     const canvas = document.getElementById('camerafeed')
     XR8.run({ canvas: canvas })
 }
-////////////////////////////////////////////////////////////////
-function loadTextures() {
-    loaderRGBE.setPath('/textures/')
-        .load('quarry_01_1k.hdr', function (texture) {
-            texture.mapping = THREE.EquirectangularReflectionMapping
-            hdriMap = texture
-        })
+
+
+
+const load = () => {
+    initLoader()
 }
-function fadeOnPlanets() {
-    fadeInTimeline.clear()
-    if (sceneTwo) {
-        // Анимация позиции и масштаба
-        fadeInTimeline.to(sceneTwo.position, {
-            y: 1.5,
-            duration: 3,
-            ease: "power2.out"
-        }, 11)
-
-        fadeInTimeline.to(sceneTwo.scale, {
-            x: 0.45,
-            y: 0.45,
-            z: 0.45,
-            duration: 3,
-            ease: "elastic.out(1, 0.75)"
-        }, 11)
-
-        // Анимация прозрачности
-        sceneTwo.traverse((child) => {
-            if (child.isMesh) {
-                fadeInTimeline.to(child.material, {
-                    opacity: 1,
-                    duration: 0.5,
-                    ease: "power2.inOut"
-                }, 11.5)
-            }
-        })
+window.onload = () => {
+    if (window.XRExtras) {
+        load()
+    } else {
+        window.addEventListener('xrextrasloaded', load)
     }
 }
-////////////////////////////////////////////////////////////////
-const load = () => { XRExtras.Loading.showLoading({ onxrloaded }) }
-window.onload = () => { window.XRExtras ? load() : window.addEventListener('xrextrasloaded', load) }
 
+document.addEventListener('DOMContentLoaded', () => {
+    const loadImage = document.getElementById("loadImage")
+    if (loadImage) {
+        loadImage.src = "/assets/load-grad.png"
+    }
+    const instructionsScreen = document.getElementById('instructions-screen')
+    const startButton = document.getElementById('start-button')
+
+    startButton.addEventListener('click', () => {
+        // Скрываем экран инструкций
+        instructionsScreen.style.display = 'none'
+
+        // Показываем экран загрузки 8th Wall после скрытия инструкций
+        XRExtras.Loading.showLoading({ onxrloaded })
+    })
+})

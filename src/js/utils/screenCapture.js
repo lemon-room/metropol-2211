@@ -1,22 +1,56 @@
-import { canvas } from '../core/renderer.js'
+const isIOS = () => {
+  return [
+        'iPad Simulator',
+        'iPhone Simulator',
+        'iPod Simulator',
+        'iPad',
+        'iPhone',
+        'iPod'
+      ].includes(navigator.platform)
+      || (navigator.userAgent.includes("Mac") && "ontouchend" in document)
+}
+
+const getVideoMimeType = () => {
+  const iOS = isIOS()
+
+  const types = iOS ? [
+    'video/mp4;codecs=h264,mp4a.40.2',
+    'video/mp4;codecs=h264',
+    'video/mp4'
+  ] : [
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm'
+  ]
+
+  for (const type of types) {
+    if (MediaRecorder.isTypeSupported(type)) {
+      console.log('Using MIME type:', type)
+      return type
+    }
+  }
+
+  throw new Error('No supported video MIME type found')
+}
+
 export const showNotification = (message, type = 'info') => {
   console.log(`[Notification] ${message}`)
   const notification = document.createElement('div')
   notification.style.cssText = `
       position: fixed;
-      top: 20px;
+      top: ${type === 'error' ? '20px' : '40px'};
       left: 50%;
       transform: translateX(-50%);
       padding: 10px 20px;
-      border-radius: 5px;
+      border-radius: 6px;
       color: white;
-      font-weight: bold;
       z-index: 10000;
-      background: ${type === 'error' ? '#ff4444' : '#44aa44'};
+      background: ${type === 'error' ? 'rgba(255, 0, 0, 0.2)' : 'rgba(172, 172, 172, 0.2)'};
+      display: none;
   `
   notification.textContent = message
   document.body.appendChild(notification)
-  setTimeout(() => notification.remove(), 3000)
+  setTimeout(() => notification.remove(), 400)
 }
 
 // components/RecordingIndicator.js
@@ -57,6 +91,11 @@ export const showRecordingIndicator = (show) => {
     indicator.remove()
   }
 }
+// Определяем расширение файла на основе MIME типа
+const getFileExtension = (blob) => {
+  if (blob.type.includes('mp4')) return 'mp4'
+  return 'webm'
+}
 
 // components/VideoPreview.js
 export const createVideoPreview = (blob) => {
@@ -65,28 +104,28 @@ export const createVideoPreview = (blob) => {
   const container = document.createElement('div')
   container.style.cssText = `
       position: fixed;
-      bottom: 80px;
-      right: 20px;
-      background: rgba(0, 0, 0, 0.8);
-      padding: 10px;
-      border-radius: 10px;
+      bottom: 0;
+      left: 0;
+      margin: auto;
+      padding: 60px;
       z-index: 1000;
   `
 
   const video = document.createElement('video')
   video.controls = true
+  video.playsInline = true
   video.style.cssText = `
-      width: 200px;
-      border-radius: 5px;
-      margin-bottom: 10px;
+      width: 100%;
+      margin: auto;
+      border-radius: 10px;
+      margin-bottom: 6px;
+      background: rgba(0,0,0,0.6);
+      padding: 10px;
+      border-radius: 20px;
   `
-
-  video.onloadedmetadata = () => {
-    console.log('Video metadata:', {
-      duration: video.duration,
-      width: video.videoWidth,
-      height: video.videoHeight
-    })
+  const playPromise = video.play()
+  if (playPromise !== null){
+    playPromise.catch(() => { video.play() })
   }
 
   video.onerror = () => {
@@ -104,20 +143,21 @@ export const createVideoPreview = (blob) => {
   `
 
   const downloadBtn = document.createElement('button')
-  downloadBtn.innerHTML = 'Скачать'
+  downloadBtn.innerHTML = 'Сохранить'
   downloadBtn.style.cssText = `
       flex: 1;
-      padding: 8px;
-      background: #4CAF50;
-      color: white;
+      padding: 12px 32px;
+      background: white;
+      color: black;
       border: none;
-      border-radius: 5px;
+      border-radius: 6px;
       cursor: pointer;
   `
   downloadBtn.onclick = () => {
+    const extension = getFileExtension(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `AR-Video-${new Date().toISOString()}.webm`
+    a.download = `AR-Video-${new Date().toISOString()}.${extension}`
     a.click()
   }
 
@@ -125,12 +165,14 @@ export const createVideoPreview = (blob) => {
   closeBtn.innerHTML = 'Закрыть'
   closeBtn.style.cssText = `
       flex: 1;
-      padding: 8px;
-      background: #f44336;
+      padding: 12px 32px;
+      background: rgba(255, 255, 255, 0.2);
       color: white;
       border: none;
-      border-radius: 5px;
+      border-radius: 6px;
       cursor: pointer;
+      backdrop-filter: blur(64px);
+      -webkit-backdrop-filter: blur(64px);
   `
   closeBtn.onclick = () => {
     container.remove()
@@ -152,6 +194,7 @@ export class MediaRecorderService {
     this.mediaRecorder = null
     this.recordedChunks = []
     this.videoStream = null
+    this.mimeType = null
   }
 
   getCanvasStream() {
@@ -175,14 +218,11 @@ export class MediaRecorderService {
       this.videoStream = this.getCanvasStream()
       console.log('Stream obtained:', this.videoStream)
 
-      let mimeType = 'video/webm;codecs=vp9'
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        console.warn('vp9 not supported, trying vp8')
-        mimeType = 'video/webm;codecs=vp8'
-      }
+      this.mimeType = getVideoMimeType()
+      console.log('Selected MIME type:', this.mimeType)
 
       this.mediaRecorder = new MediaRecorder(this.videoStream, {
-        mimeType,
+        mimeType: this.mimeType,
         videoBitsPerSecond: 2500000
       })
 
@@ -223,8 +263,10 @@ export class MediaRecorderService {
         return
       }
 
-      const blob = new Blob(this.recordedChunks, { type: 'video/webm' })
-      console.log('Blob created:', blob.size)
+      // Используем сохраненный MIME тип при создании Blob
+      const blob = new Blob(this.recordedChunks, { type: this.mimeType })
+      console.log('Blob created:', blob.size, 'Type:', this.mimeType)
+
 
       if (blob.size < 1000) {
         showNotification('Ошибка: файл слишком мал', 'error')
@@ -353,8 +395,8 @@ export class CaptureController {
         const centerY = rect.top + rect.height / 2
 
         const distance = Math.sqrt(
-          Math.pow(touch.clientX - centerX, 2) +
-          Math.pow(touch.clientY - centerY, 2)
+            Math.pow(touch.clientX - centerX, 2) +
+            Math.pow(touch.clientY - centerY, 2)
         )
 
         if (distance > moveThreshold) {
